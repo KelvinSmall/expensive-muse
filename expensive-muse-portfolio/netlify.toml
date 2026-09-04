@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback so /project/:slug, /admin, etc. work on refresh / direct link.
+# Netlify Functions are matched first automatically, so this does not shadow them.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Cross-origin isolation is required for ffmpeg.wasm's multi-threaded core
+# (SharedArrayBuffer). Applied site-wide; it has no effect on the Google
+# Drive <iframe> embed itself, only on top-level navigation to this site.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "credentialless"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
