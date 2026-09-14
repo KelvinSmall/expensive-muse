@@ -1,15 +1,39 @@
 import type { FFmpeg } from '@ffmpeg/ffmpeg'
 import { COMPRESSION_PRESETS, type CompressionPreset } from './types'
 
-const FFMPEG_CORE_BASE = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm'
+// Single-threaded core deliberately — the multi-threaded core (@ffmpeg/core-mt)
+// spawns worker threads that can get stuck in a restart loop on some
+// browser/network combinations, hanging forever with no error. The
+// single-threaded core has a simpler load path (no separate worker file,
+// no SharedArrayBuffer dependency) and is the reliable choice here; it's
+// somewhat slower per file, but "finishes" beats "fast but sometimes never
+// finishes" for a tool people depend on.
+const FFMPEG_CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+const LOAD_TIMEOUT_MS = 30_000
+const EXEC_TIMEOUT_MS = 6 * 60_000
 
 let ffmpegSingleton: FFmpeg | null = null
 let loadingPromise: Promise<FFmpeg> | null = null
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms)
+    promise.then(
+      (v) => {
+        clearTimeout(timer)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(timer)
+        reject(e)
+      }
+    )
+  })
+}
+
 /**
- * Loads ffmpeg.wasm (multi-threaded core) once and reuses it for every
- * upload in the session. This is real WebAssembly ffmpeg, not a filename trick.
- * Requires cross-origin isolation (COOP/COEP headers) — see netlify.toml.
+ * Loads ffmpeg.wasm once and reuses it for every upload in the session.
+ * This is real WebAssembly ffmpeg, not a filename trick.
  *
  * The @ffmpeg/* packages are dynamically imported here rather than at the
  * top of the file. They're only ever used from admin upload pages — a
@@ -20,17 +44,26 @@ async function getFFmpeg(onLog?: (msg: string) => void): Promise<FFmpeg> {
   if (ffmpegSingleton) return ffmpegSingleton
   if (loadingPromise) return loadingPromise
 
-  loadingPromise = (async () => {
-    const [{ FFmpeg }, { toBlobURL }] = await Promise.all([import('@ffmpeg/ffmpeg'), import('@ffmpeg/util')])
-    const ffmpeg = new FFmpeg()
-    if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
-    const coreURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, 'text/javascript')
-    const wasmURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm')
-    const workerURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.worker.js`, 'text/javascript')
-    await ffmpeg.load({ coreURL, wasmURL, workerURL })
-    ffmpegSingleton = ffmpeg
-    return ffmpeg
-  })()
+  loadingPromise = withTimeout(
+    (async () => {
+      const [{ FFmpeg }, { toBlobURL }] = await Promise.all([import('@ffmpeg/ffmpeg'), import('@ffmpeg/util')])
+      const ffmpeg = new FFmpeg()
+      if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
+      const coreURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, 'text/javascript')
+      const wasmURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm')
+      await ffmpeg.load({ coreURL, wasmURL })
+      ffmpegSingleton = ffmpeg
+      return ffmpeg
+    })(),
+    LOAD_TIMEOUT_MS,
+    'The video engine took too long to load — check your connection and try again.'
+  )
+
+  // If loading fails or times out, forget the stuck promise so the next
+  // attempt starts fresh instead of reusing a dead one forever.
+  loadingPromise.catch(() => {
+    loadingPromise = null
+  })
 
   return loadingPromise
 }
@@ -71,17 +104,21 @@ export async function compressVideo(
 
   await ffmpeg.writeFile(inputName, await (await getFetchFile())(file))
 
-  await ffmpeg.exec([
-    '-i', inputName,
-    '-vf', `scale=-2:'min(${cfg.maxHeight},ih)'`,
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', String(cfg.crf),
-    '-c:a', 'aac',
-    '-b:a', cfg.audioBitrate,
-    '-movflags', '+faststart',
-    outputName,
-  ])
+  await withTimeout(
+    ffmpeg.exec([
+      '-i', inputName,
+      '-vf', `scale=-2:'min(${cfg.maxHeight},ih)'`,
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', String(cfg.crf),
+      '-c:a', 'aac',
+      '-b:a', cfg.audioBitrate,
+      '-movflags', '+faststart',
+      outputName,
+    ]),
+    EXEC_TIMEOUT_MS,
+    'Compression is taking much longer than expected and was stopped. Try the "Web" preset for a lighter job, or "Original" to skip compression entirely.'
+  )
 
   const data = await ffmpeg.readFile(outputName)
   const blob = new Blob([toArrayBuffer(data as Uint8Array)], { type: 'video/mp4' })
@@ -99,7 +136,11 @@ export async function generateThumbnail(file: File): Promise<Blob> {
   const inputName = 'thumb-src' + extOf(file.name)
   const outputName = 'thumb.jpg'
   await ffmpeg.writeFile(inputName, await (await getFetchFile())(file))
-  await ffmpeg.exec(['-i', inputName, '-ss', '00:00:01', '-frames:v', '1', '-q:v', '3', outputName])
+  await withTimeout(
+    ffmpeg.exec(['-i', inputName, '-ss', '00:00:01', '-frames:v', '1', '-q:v', '3', outputName]),
+    30_000,
+    'Generating the thumbnail took too long. Please upload one manually instead.'
+  )
   const data = await ffmpeg.readFile(outputName)
   await ffmpeg.deleteFile(inputName)
   await ffmpeg.deleteFile(outputName)
