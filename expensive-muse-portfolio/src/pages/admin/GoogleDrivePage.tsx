@@ -57,7 +57,7 @@ export default function GoogleDrivePage() {
             Connection: <span className="text-ok">Connected</span>
           </p>
           <p className="text-ink-dim text-[13px] mb-5">Google account: {status.email ?? 'Unknown'}</p>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={refresh}
               className="text-[13px] px-4 py-2 border border-border text-ink-dim hover:text-ink transition-colors"

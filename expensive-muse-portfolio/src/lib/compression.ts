@@ -1,5 +1,4 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile, toBlobURL } from '@ffmpeg/util'
+import type { FFmpeg } from '@ffmpeg/ffmpeg'
 import { COMPRESSION_PRESETS, type CompressionPreset } from './types'
 
 const FFMPEG_CORE_BASE = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm'
@@ -11,12 +10,18 @@ let loadingPromise: Promise<FFmpeg> | null = null
  * Loads ffmpeg.wasm (multi-threaded core) once and reuses it for every
  * upload in the session. This is real WebAssembly ffmpeg, not a filename trick.
  * Requires cross-origin isolation (COOP/COEP headers) — see netlify.toml.
+ *
+ * The @ffmpeg/* packages are dynamically imported here rather than at the
+ * top of the file. They're only ever used from admin upload pages — a
+ * public site visitor should never pay for downloading a video transcoder
+ * they can't use. Static imports would bundle it into every page's code.
  */
 async function getFFmpeg(onLog?: (msg: string) => void): Promise<FFmpeg> {
   if (ffmpegSingleton) return ffmpegSingleton
   if (loadingPromise) return loadingPromise
 
   loadingPromise = (async () => {
+    const [{ FFmpeg }, { toBlobURL }] = await Promise.all([import('@ffmpeg/ffmpeg'), import('@ffmpeg/util')])
     const ffmpeg = new FFmpeg()
     if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
     const coreURL = await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, 'text/javascript')
@@ -28,6 +33,15 @@ async function getFFmpeg(onLog?: (msg: string) => void): Promise<FFmpeg> {
   })()
 
   return loadingPromise
+}
+
+let fetchFileFn: ((file: File) => Promise<Uint8Array>) | null = null
+async function getFetchFile() {
+  if (!fetchFileFn) {
+    const { fetchFile } = await import('@ffmpeg/util')
+    fetchFileFn = fetchFile
+  }
+  return fetchFileFn
 }
 
 export interface CompressionResult {
@@ -55,7 +69,7 @@ export async function compressVideo(
   const inputName = 'input' + extOf(file.name)
   const outputName = 'output.mp4'
 
-  await ffmpeg.writeFile(inputName, await fetchFile(file))
+  await ffmpeg.writeFile(inputName, await (await getFetchFile())(file))
 
   await ffmpeg.exec([
     '-i', inputName,
@@ -84,7 +98,7 @@ export async function generateThumbnail(file: File): Promise<Blob> {
   const ffmpeg = await getFFmpeg()
   const inputName = 'thumb-src' + extOf(file.name)
   const outputName = 'thumb.jpg'
-  await ffmpeg.writeFile(inputName, await fetchFile(file))
+  await ffmpeg.writeFile(inputName, await (await getFetchFile())(file))
   await ffmpeg.exec(['-i', inputName, '-ss', '00:00:01', '-frames:v', '1', '-q:v', '3', outputName])
   const data = await ffmpeg.readFile(outputName)
   await ffmpeg.deleteFile(inputName)

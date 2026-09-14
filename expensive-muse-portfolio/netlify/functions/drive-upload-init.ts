@@ -51,6 +51,16 @@ export const handler: Handler = async (event) => {
       return jsonResponse(409, { error: 'Google Drive folders are not set up yet — reconnect Drive in Admin settings.' })
     }
 
+    // Google only enables CORS on the resulting upload session for the exact
+    // Origin present on THIS request. Since this call happens server-side
+    // (not from the browser), we must forward the site's real origin
+    // ourselves — otherwise the browser's later PUT to the session URL gets
+    // silently blocked by CORS even though the upload technically succeeds.
+    const siteOrigin =
+      event.headers.origin ||
+      process.env.SITE_URL ||
+      (event.headers.host ? `https://${event.headers.host}` : undefined)
+
     const sessionRes = await fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id',
       {
@@ -59,6 +69,7 @@ export const handler: Handler = async (event) => {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json; charset=UTF-8',
           'X-Upload-Content-Type': mimeType,
+          ...(siteOrigin ? { Origin: siteOrigin } : {}),
         },
         body: JSON.stringify({ name: safeName, parents: [folderId] }),
       }

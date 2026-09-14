@@ -28,7 +28,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <p className="font-display text-xl text-ink text-center mb-1">Expensive Muse</p>
+        <img src="/brand/logo-black.png" alt="Expensive Muse" className="h-10 w-auto object-contain mx-auto mb-1" />
         <p className="text-ink-dim text-[12px] tracking-wide text-center mb-10">ADMIN</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

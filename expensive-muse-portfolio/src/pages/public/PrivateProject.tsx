@@ -37,15 +37,15 @@ export default function PrivateProject() {
   return (
     <div className="min-h-screen bg-bg">
       <header className="max-w-7xl mx-auto px-6 md:px-10 py-6 flex items-center justify-between">
-        <Link to="/" className="font-display text-lg tracking-wide text-ink">
-          {settings?.studio_name ?? 'Expensive Muse'}
+        <Link to="/" className="flex items-center h-7">
+          <img src="/brand/logo-black.png" alt={settings?.studio_name ?? 'Expensive Muse'} className="h-full w-auto object-contain" />
         </Link>
         <span className="text-[11px] tracking-[0.14em] text-brass">PRIVATE SHARE</span>
       </header>
 
       <div className="max-w-6xl mx-auto px-0 md:px-10">
         {project.video_file_id ? (
-          <VideoPlayer fileId={project.video_file_id} title={project.title} />
+          <VideoPlayer fileId={project.video_file_id} title={project.title} width={project.media_width} height={project.media_height} />
         ) : (
           <div className="aspect-video bg-surface flex items-center justify-center text-ink-faint text-sm">
             Video unavailable

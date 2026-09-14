@@ -141,9 +141,12 @@ create policy "admin full access settings" on settings for all
 
 -- ---------------------------------------------------------------------
 -- Helper: private project lookup by token (bypasses visibility restriction
--- for exactly one row, via a SECURITY DEFINER function callable by anon)
+-- for exactly one row, via a SECURITY DEFINER function callable by anon).
+-- If the project also has an optional password set, p_password must match
+-- it (hashed/verified with pgcrypto — the plaintext password is never
+-- stored, and never leaves this function).
 -- ---------------------------------------------------------------------
-create or replace function get_private_project(p_slug text, p_token text)
+create or replace function get_private_project(p_slug text, p_token text, p_password text default null)
 returns setof projects
 language sql
 security definer
@@ -152,7 +155,33 @@ as $$
   select * from projects
   where slug = p_slug
     and visibility = 'private'
-    and private_token = p_token;
+    and private_token = p_token
+    and (
+      private_password_hash is null
+      or private_password_hash = crypt(coalesce(p_password, ''), private_password_hash)
+    );
 $$;
 
-grant execute on function get_private_project(text, text) to anon, authenticated;
+grant execute on function get_private_project(text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Helper: admin sets/clears the optional password on a private project.
+-- SECURITY DEFINER so it can write the hash despite RLS; only granted to
+-- 'authenticated' (i.e. a logged-in admin — see the single-studio auth
+-- model note above). Pass null or '' to remove the password.
+-- ---------------------------------------------------------------------
+create or replace function set_private_password(p_project_id uuid, p_password text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update projects
+  set private_password_hash = case
+    when p_password is null or p_password = '' then null
+    else crypt(p_password, gen_salt('bf'))
+  end
+  where id = p_project_id;
+$$;
+
+grant execute on function set_private_password(uuid, text) to authenticated;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Nav from '../../components/Nav'
 import ProjectCard from '../../components/ProjectCard'
 import EmptyState from '../../components/EmptyState'
@@ -6,10 +7,24 @@ import { usePublicShell } from '../../lib/usePublicData'
 import { listPublishedProjects } from '../../lib/api'
 import type { Project } from '../../lib/types'
 
+/**
+ * A curated client link looks like /?only=reels,video — the admin picks
+ * which categories to include when generating it (see admin "Share Link"
+ * page). Visitors who open that link only ever see those categories; every
+ * other tab and its projects are simply absent, not just visually hidden.
+ * The plain root URL with no `only` param shows everything, as normal.
+ */
 export default function Home() {
   const { settings, categories, loading: shellLoading } = usePublicShell()
   const [projects, setProjects] = useState<Project[] | null>(null)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [params] = useSearchParams()
+  const onlySlugs = useMemo(() => {
+    const raw = params.get('only')
+    return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : null
+  }, [params])
+  const [activeCategory, setActiveCategory] = useState<string | null>(
+    onlySlugs && onlySlugs.length === 1 ? onlySlugs[0] : null
+  )
 
   useEffect(() => {
     listPublishedProjects()
@@ -17,11 +32,18 @@ export default function Home() {
       .catch(() => setProjects([]))
   }, [])
 
+  const visibleCategories = useMemo(() => {
+    if (!onlySlugs) return categories
+    return categories.filter((c) => onlySlugs.includes(c.slug))
+  }, [categories, onlySlugs])
+
   const filtered = useMemo(() => {
     if (!projects) return null
-    if (!activeCategory) return projects
-    return projects.filter((p) => p.category?.slug === activeCategory)
-  }, [projects, activeCategory])
+    let list = projects
+    if (onlySlugs) list = list.filter((p) => p.category?.slug && onlySlugs.includes(p.category.slug))
+    if (activeCategory) list = list.filter((p) => p.category?.slug === activeCategory)
+    return list
+  }, [projects, activeCategory, onlySlugs])
 
   if (shellLoading) return null
 
@@ -39,7 +61,7 @@ export default function Home() {
     <div className="min-h-screen bg-bg">
       <Nav
         studioName={settings?.studio_name ?? 'Expensive Muse'}
-        categories={categories}
+        categories={visibleCategories}
         active={activeCategory}
         onSelect={setActiveCategory}
       />
@@ -64,7 +86,7 @@ export default function Home() {
             subtitle={activeCategory ? 'Try another category, or view all work.' : undefined}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12 items-start">
             {filtered.map((p) => (
               <ProjectCard key={p.id} project={p} />
             ))}

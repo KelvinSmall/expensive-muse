@@ -119,7 +119,10 @@ export function driveEmbedUrl(fileId: string) {
   return `https://drive.google.com/file/d/${fileId}/preview`
 }
 
-/** Direct (non-embed) thumbnail image URL for a published Drive image. */
-export function driveThumbUrl(fileId: string) {
-  return `https://lh3.googleusercontent.com/d/${fileId}=w800`
+/** Direct (non-embed) thumbnail image URL for a published Drive image.
+ *  Google serves a resized JPEG at this exact width — pass a smaller width
+ *  for grid thumbnails so slow connections don't download a full-res image
+ *  just to show a small card. */
+export function driveThumbUrl(fileId: string, width = 800) {
+  return `https://lh3.googleusercontent.com/d/${fileId}=w${width}`
 }

@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { compressVideo, estimateCompressedSize, generateThumbnail } from '../../lib/compression'
 import { initDriveUpload, uploadToDriveSession, publishDriveFiles } from '../../lib/drive'
-import { createProject } from '../../lib/api'
+import { createProject, getSettings } from '../../lib/api'
+import { getVideoDimensions } from '../../lib/mediaDimensions'
 import type { CompressionPreset, Visibility } from '../../lib/types'
 import { COMPRESSION_PRESETS } from '../../lib/types'
 import { useCategories } from '../../lib/useCategories'
@@ -29,6 +30,17 @@ function fmtSize(bytes: number) {
 export default function AddReel() {
   const navigate = useNavigate()
   const { categories } = useCategories()
+  const [maxVideoMb, setMaxVideoMb] = useState<number | null>(null)
+  const [maxImageMb, setMaxImageMb] = useState<number | null>(null)
+
+  useEffect(() => {
+    getSettings()
+      .then((s) => {
+        setMaxVideoMb(s.max_video_size_mb)
+        setMaxImageMb(s.max_image_size_mb)
+      })
+      .catch(() => {})
+  }, [])
 
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [thumbFile, setThumbFile] = useState<File | null>(null)
@@ -74,6 +86,16 @@ export default function AddReel() {
     if (!thumbFile) return setError('A thumbnail is required.')
     if (!client.trim() || !title.trim()) return setError('Client and project title are required.')
     if (!categoryId) return setError('Choose a category.')
+    if (maxVideoMb && videoFile.size > maxVideoMb * 1024 * 1024) {
+      return setError(
+        `This video is ${fmtSize(videoFile.size)}, which is over the ${maxVideoMb} MB limit set in Portfolio Settings. Choose a smaller file, pick a stronger compression preset, or raise the limit in Settings.`
+      )
+    }
+    if (maxImageMb && thumbFile.size > maxImageMb * 1024 * 1024) {
+      return setError(
+        `This thumbnail is ${fmtSize(thumbFile.size)}, which is over the ${maxImageMb} MB limit set in Portfolio Settings.`
+      )
+    }
 
     setError(null)
     try {
@@ -123,6 +145,10 @@ export default function AddReel() {
 
       // 4. Save project record
       setStep('saving')
+      // Read the video's real dimensions so its display box everywhere
+      // (grid card, project page) matches the original ratio exactly —
+      // no forced 16:9 crop for portrait/vertical reels.
+      const dims = await getVideoDimensions(videoFile).catch(() => null)
       const project = await createProject({
         title: title.trim(),
         client: client.trim(),
@@ -131,9 +157,15 @@ export default function AddReel() {
         description: description.trim(),
         visibility,
         featured,
+        media_type: 'video',
         thumbnail_file_id: thumbnailFileId,
         video_file_id: videoFileId,
         original_file_id: originalFileId,
+        gallery_file_ids: [],
+        media_width: dims?.width ?? null,
+        media_height: dims?.height ?? null,
+        gallery_widths: [],
+        gallery_heights: [],
       })
 
       // 5. Publish — set Drive sharing/download restrictions
@@ -163,10 +195,12 @@ export default function AddReel() {
             className="w-full text-sm text-ink-dim file:mr-3 file:py-2 file:px-3 file:border file:border-border file:bg-surface file:text-ink file:text-[13px]"
           />
           {videoFile && (
-            <p className="text-ink-dim text-[12px] mt-2">
+            <p className={`text-[12px] mt-2 ${maxVideoMb && videoFile.size > maxVideoMb * 1024 * 1024 ? 'text-danger' : 'text-ink-dim'}`}>
               {videoFile.name} · {fmtSize(videoFile.size)}
+              {maxVideoMb && videoFile.size > maxVideoMb * 1024 * 1024 && ` — exceeds the ${maxVideoMb} MB limit`}
             </p>
           )}
+          {maxVideoMb && <p className="text-ink-faint text-[11px] mt-1">Limit: {maxVideoMb} MB per video (set in Portfolio Settings)</p>}
         </Field>
 
         {videoFile && (
@@ -237,7 +271,7 @@ export default function AddReel() {
           <TextInput value={title} onChange={setTitle} disabled={busy} placeholder="e.g. Cooker Hob Reel" />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Category">
             <select
               value={categoryId}
@@ -268,7 +302,7 @@ export default function AddReel() {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Visibility">
             <select
               value={visibility}

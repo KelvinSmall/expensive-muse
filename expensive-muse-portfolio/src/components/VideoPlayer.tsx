@@ -14,10 +14,23 @@ import { driveEmbedUrl } from '../lib/drive'
  * itself. None of this stops screen recording — nothing can — it only
  * removes the one-click download path.
  */
-export default function VideoPlayer({ fileId, title }: { fileId: string; title: string }) {
+export default function VideoPlayer({
+  fileId,
+  title,
+  width,
+  height,
+}: {
+  fileId: string
+  title: string
+  width?: number | null
+  height?: number | null
+}) {
+  const ratio = width && height ? `${width} / ${height}` : '16 / 9'
+  const isPortrait = !!(width && height && height > width)
   return (
     <div
-      className="relative w-full aspect-video bg-black select-none"
+      className={`relative bg-black select-none mx-auto ${isPortrait ? 'w-full max-w-sm' : 'w-full'}`}
+      style={{ aspectRatio: ratio }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <iframe

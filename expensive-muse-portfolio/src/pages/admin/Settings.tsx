@@ -59,6 +59,40 @@ export default function Settings() {
           />
         </div>
 
+        <div className="border-t border-border pt-5">
+          <p className="text-ink text-[14px] mb-1">Upload Limits</p>
+          <p className="text-ink-dim text-[12px] mb-4">
+            Enforced for real before any upload starts — a file over the limit is rejected with a clear message
+            rather than silently accepted.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-[12px] text-ink-dim mb-1.5">Max video size (MB)</p>
+              <input
+                type="number"
+                min={1}
+                value={settings.max_video_size_mb}
+                onChange={(e) =>
+                  setSettings({ ...settings, max_video_size_mb: Math.max(1, Number(e.target.value) || 1) })
+                }
+                className="w-full bg-surface border border-border px-3 py-2.5 text-ink text-sm focus:border-brass outline-none"
+              />
+            </div>
+            <div>
+              <p className="text-[12px] text-ink-dim mb-1.5">Max image size (MB)</p>
+              <input
+                type="number"
+                min={1}
+                value={settings.max_image_size_mb}
+                onChange={(e) =>
+                  setSettings({ ...settings, max_image_size_mb: Math.max(1, Number(e.target.value) || 1) })
+                }
+                className="w-full bg-surface border border-border px-3 py-2.5 text-ink text-sm focus:border-brass outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
         <button
           type="submit"
           disabled={saving}

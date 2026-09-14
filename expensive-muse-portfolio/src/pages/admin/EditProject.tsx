@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getProject, updateProject } from '../../lib/api'
-import { initDriveUpload, uploadToDriveSession, publishDriveFiles } from '../../lib/drive'
+import { initDriveUpload, uploadToDriveSession, publishDriveFiles, driveThumbUrl } from '../../lib/drive'
 import { useCategories } from '../../lib/useCategories'
+import ShareBlock from '../../components/ShareBlock'
 import type { Project, Visibility } from '../../lib/types'
 
 export default function EditProject() {
@@ -62,11 +63,14 @@ export default function EditProject() {
 
   return (
     <div className="px-6 md:px-10 py-8 md:py-10 max-w-2xl">
-      <h1 className="font-display text-2xl text-ink mb-8">Edit Project</h1>
+      <h1 className="font-display text-2xl text-ink mb-1">Edit Project</h1>
+      <p className="text-ink-faint text-[12px] mb-8">
+        {project.media_type === 'gallery' ? 'Photo / Design gallery' : 'Video reel'}
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <p className="text-[12px] text-ink-dim mb-1.5">Thumbnail</p>
+          <p className="text-[12px] text-ink-dim mb-1.5">{project.media_type === 'gallery' ? 'Cover thumbnail' : 'Thumbnail'}</p>
           <div className="flex items-center gap-4">
             {project.thumbnail_file_id && (
               <img
@@ -86,12 +90,26 @@ export default function EditProject() {
               />
             </label>
           </div>
+
+          {project.media_type === 'gallery' && project.gallery_file_ids.length > 0 && (
+            <div className="mt-3">
+              <p className="text-ink-faint text-[11px] mb-1.5">
+                All {project.gallery_file_ids.length} images in this gallery (edit the set by re-uploading via Add
+                Photos / Design as a new project — bulk gallery editing isn't available here yet)
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {project.gallery_file_ids.map((id) => (
+                  <img key={id} src={driveThumbUrl(id, 200)} alt="" className="aspect-square object-cover bg-surface" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <TextField label="Client" value={project.client} onChange={(v) => setProject({ ...project, client: v })} />
         <TextField label="Project Title" value={project.title} onChange={(v) => setProject({ ...project, title: v })} />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-[12px] text-ink-dim mb-1.5">Category</p>
             <select
@@ -125,7 +143,7 @@ export default function EditProject() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-[12px] text-ink-dim mb-1.5">Visibility</p>
             <select
@@ -148,13 +166,16 @@ export default function EditProject() {
           </label>
         </div>
 
-        {project.visibility === 'private' && project.private_token && (
-          <div className="border border-border px-4 py-3">
-            <p className="text-[12px] text-ink-dim mb-1">Private share link</p>
-            <p className="text-[12px] text-brass break-all select-all">
-              {window.location.origin}/private/{project.slug}?key={project.private_token}
-            </p>
-          </div>
+        {(project.visibility === 'published' || project.visibility === 'private') && (
+          <ShareBlock
+            label={project.visibility === 'private' ? 'Private share link' : 'Public link'}
+            url={
+              project.visibility === 'private' && project.private_token
+                ? `${window.location.origin}/private/${project.slug}?key=${project.private_token}`
+                : `${window.location.origin}/project/${project.slug}`
+            }
+            message={`${project.client} — ${project.title}`}
+          />
         )}
 
         {error && <p className="text-danger text-[13px]">{error}</p>}

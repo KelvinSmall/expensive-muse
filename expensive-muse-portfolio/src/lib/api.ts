@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Category, Project, Settings, Visibility } from './types'
+import type { Category, MediaType, Project, Settings, Visibility } from './types'
 
 // -----------------------------------------------------------------------
 // SETTINGS
@@ -56,6 +56,11 @@ export async function reorderCategories(orderedIds: string[]) {
   await Promise.all(
     orderedIds.map((id, i) => supabase.from('categories').update({ sort_order: i }).eq('id', id))
   )
+}
+
+export async function setCategoryHidden(id: string, hidden: boolean) {
+  const { error } = await supabase.from('categories').update({ hidden }).eq('id', id)
+  if (error) throw error
 }
 
 // -----------------------------------------------------------------------
@@ -118,9 +123,15 @@ export interface CreateProjectInput {
   description: string
   visibility: Visibility
   featured: boolean
+  media_type: MediaType
   thumbnail_file_id: string | null
   video_file_id: string | null
   original_file_id: string | null
+  gallery_file_ids: string[]
+  media_width: number | null
+  media_height: number | null
+  gallery_widths: number[]
+  gallery_heights: number[]
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {

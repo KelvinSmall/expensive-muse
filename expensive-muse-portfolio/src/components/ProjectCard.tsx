@@ -3,15 +3,20 @@ import type { Project } from '../lib/types'
 import { driveThumbUrl } from '../lib/drive'
 
 export default function ProjectCard({ project }: { project: Project }) {
+  // Every card's box is sized to the media's own real aspect ratio (captured
+  // at upload time) — a portrait reel stays tall, landscape stays wide.
+  // Falls back to 16:9 only for older records uploaded before this existed.
+  const ratio = project.media_width && project.media_height ? `${project.media_width} / ${project.media_height}` : '16 / 9'
+
   return (
     <Link to={`/project/${project.slug}`} className="group block">
-      <div className="relative aspect-video overflow-hidden bg-surface">
+      <div className="relative overflow-hidden bg-surface-2" style={{ aspectRatio: ratio }}>
         {project.thumbnail_file_id ? (
           <img
-            src={driveThumbUrl(project.thumbnail_file_id)}
+            src={driveThumbUrl(project.thumbnail_file_id, 600)}
             alt={`${project.client} — ${project.title}`}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+            className="w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-[1.035]"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-ink-faint text-xs">No thumbnail</div>
@@ -19,13 +24,15 @@ export default function ProjectCard({ project }: { project: Project }) {
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <span className="w-12 h-12 rounded-full border border-ink/70 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 1.5L12 7L2 12.5V1.5Z" fill="currentColor" className="text-ink" />
-            </svg>
-          </span>
-        </div>
+        {project.media_type !== 'gallery' && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+            <span className="w-12 h-12 rounded-full border border-ink/70 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 1.5L12 7L2 12.5V1.5Z" fill="currentColor" className="text-ink" />
+              </svg>
+            </span>
+          </div>
+        )}
 
         {project.featured && (
           <span className="absolute top-3 left-3 text-[10px] tracking-[0.14em] text-bg bg-brass px-2 py-1">

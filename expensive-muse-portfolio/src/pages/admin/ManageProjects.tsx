@@ -85,28 +85,31 @@ export default function ManageProjects() {
               onDragStart={() => (dragIndex.current = i)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(i)}
-              className="flex items-center gap-4 py-3.5"
+              className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3.5"
             >
-              <span className="text-ink-faint cursor-grab select-none" title="Drag to reorder">
-                ☰
-              </span>
-              <div className="flex-1 min-w-0">
-                <Link to={`/admin/projects/${p.id}`} className="text-ink text-[14px] hover:text-brass transition-colors">
-                  {p.client} — {p.title}
-                </Link>
-                <p className="text-ink-dim text-[12px] mt-0.5">
-                  {p.category?.name ?? 'Uncategorised'} · {p.year} ·{' '}
-                  <span
-                    className={
-                      p.visibility === 'published' ? 'text-ok' : p.visibility === 'private' ? 'text-brass' : 'text-ink-faint'
-                    }
-                  >
-                    {p.visibility}
-                  </span>
-                  {p.featured && <span className="text-brass"> · Featured</span>}
-                </p>
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <span className="text-ink-faint cursor-grab select-none shrink-0 mt-0.5" title="Drag to reorder">
+                  ☰
+                </span>
+                <div className="min-w-0 flex-1">
+                  <Link to={`/admin/projects/${p.id}`} className="text-ink text-[14px] hover:text-brass transition-colors">
+                    {p.client} — {p.title}
+                  </Link>
+                  <p className="text-ink-dim text-[12px] mt-0.5">
+                    {p.media_type === 'gallery' ? '🖼 ' : '🎬 '}
+                    {p.category?.name ?? 'Uncategorised'} · {p.year} ·{' '}
+                    <span
+                      className={
+                        p.visibility === 'published' ? 'text-ok' : p.visibility === 'private' ? 'text-brass' : 'text-ink-faint'
+                      }
+                    >
+                      {p.visibility}
+                    </span>
+                    {p.featured && <span className="text-brass"> · Featured</span>}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-[12px] shrink-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] pl-7 md:pl-0 md:shrink-0">
                 <Link to={`/admin/projects/${p.id}`} className="text-ink-dim hover:text-ink transition-colors">
                   Edit
                 </Link>

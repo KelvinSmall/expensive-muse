@@ -1,10 +1,12 @@
 export type Visibility = 'published' | 'hidden' | 'private'
+export type MediaType = 'video' | 'gallery'
 
 export interface Category {
   id: string
   name: string
   slug: string
   sort_order: number
+  hidden: boolean
 }
 
 export interface Project {
@@ -15,9 +17,15 @@ export interface Project {
   category_id: string | null
   year: number
   description: string
+  media_type: MediaType
   thumbnail_file_id: string | null
   video_file_id: string | null
   original_file_id: string | null
+  gallery_file_ids: string[]
+  media_width: number | null
+  media_height: number | null
+  gallery_widths: number[]
+  gallery_heights: number[]
   visibility: Visibility
   featured: boolean
   sort_order: number
@@ -46,6 +54,8 @@ export interface Settings {
   drive_originals_folder_id: string | null
   drive_archive_folder_id: string | null
   drive_connected_email: string | null
+  max_video_size_mb: number
+  max_image_size_mb: number
 }
 
 export type CompressionPreset = 'original' | 'high' | 'medium' | 'web'

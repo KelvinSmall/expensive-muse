@@ -15,11 +15,11 @@ export default function Nav({
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-bg/85 border-b border-border">
       <div className="max-w-7xl mx-auto px-6 md:px-10 py-5 flex items-center justify-between gap-6">
-        <Link to="/" className="font-display text-lg md:text-xl tracking-wide text-ink shrink-0">
-          {studioName}
+        <Link to="/" className="shrink-0 flex items-center h-8 md:h-9">
+          <img src="/brand/logo-black.png" alt={studioName} className="h-full w-auto object-contain" />
         </Link>
 
-        {onSelect && (
+        {onSelect && categories.length > 1 && (
           <nav className="flex items-center gap-5 md:gap-7 overflow-x-auto scroll-thin text-[13px] tracking-wide">
             <button
               onClick={() => onSelect(null)}

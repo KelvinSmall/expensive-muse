@@ -4,8 +4,11 @@ import { useAuth } from '../../lib/auth'
 const links = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/new', label: 'Add New Reel', end: true },
+  { to: '/admin/new-gallery', label: 'Add Photos / Design', end: true },
+  { to: '/admin/bulk-upload', label: 'Bulk Upload', end: true },
   { to: '/admin/projects', label: 'Manage Projects', end: true },
   { to: '/admin/categories', label: 'Categories', end: true },
+  { to: '/admin/share-link', label: 'Share Link', end: true },
   { to: '/admin/drive', label: 'Google Drive', end: true },
   { to: '/admin/settings', label: 'Portfolio Settings', end: true },
 ]
@@ -15,12 +18,12 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-bg flex flex-col md:flex-row">
-      <aside className="md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-border md:min-h-screen">
+      <aside className="md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-border md:min-h-screen md:relative">
         <div className="px-6 py-6">
-          <p className="font-display text-lg text-ink">Expensive Muse</p>
-          <p className="text-ink-faint text-[11px] tracking-[0.14em] mt-0.5">ADMIN</p>
+          <img src="/brand/logo-black.png" alt="Expensive Muse" className="h-7 w-auto object-contain" />
+          <p className="text-ink-faint text-[11px] tracking-[0.14em] mt-1.5">ADMIN</p>
         </div>
-        <nav className="px-3 flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-3 md:pb-0">
+        <nav className="px-3 flex md:flex-col gap-1 overflow-x-auto scroll-thin md:overflow-visible pb-3 md:pb-0">
           {links.map((l) => (
             <NavLink
               key={l.to}

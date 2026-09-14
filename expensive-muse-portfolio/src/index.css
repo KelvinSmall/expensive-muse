@@ -1,21 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* ---- Expensive Muse design tokens ---- */
-  --color-ink: #f3eee4;         /* warm bone white — primary text */
-  --color-ink-dim: #948e80;     /* muted warm grey — secondary text */
-  --color-ink-faint: #5c574c;   /* tertiary / disabled */
-  --color-bg: #0b0a09;          /* near-black, warm cast */
-  --color-surface: #141311;     /* raised panels */
-  --color-surface-2: #1c1a17;   /* admin cards, hover surfaces */
-  --color-border: #2a2722;      /* hairline borders */
-  --color-brass: #b98f4a;       /* accent — muted antique brass */
-  --color-brass-dim: #7c6636;
-  --color-danger: #c1543f;
-  --color-ok: #6e8f6a;
+  /* ---- Expensive Muse design tokens — Apple-style light theme ---- */
+  --color-ink: #1d1d1f;          /* near-black — primary text */
+  --color-ink-dim: #6e6e73;      /* secondary grey text */
+  --color-ink-faint: #a1a1a6;    /* tertiary / disabled */
+  --color-bg: #f5f5f7;           /* light grey app background */
+  --color-surface: #ffffff;      /* raised panels / cards */
+  --color-surface-2: #f0f0f2;    /* hover surfaces, subtle admin cards */
+  --color-border: #e2e2e5;       /* hairline borders */
+  --color-brass: #0071e3;        /* accent — Apple-style blue */
+  --color-brass-dim: #0058b0;
+  --color-danger: #ff3b30;
+  --color-ok: #34c759;
 
-  --font-display: 'Fraunces', Georgia, serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -33,7 +33,7 @@ body {
 
 ::selection {
   background: var(--color-brass);
-  color: var(--color-bg);
+  color: #ffffff;
 }
 
 /* visible focus ring everywhere, no exceptions */
@@ -51,7 +51,7 @@ body {
   }
 }
 
-.font-display { font-family: var(--font-display); }
+.font-display { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
 
 /* thin custom scrollbar for admin panels */
 .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
