@@ -11,6 +11,7 @@ import NotFound from './pages/public/NotFound'
 // admin code, which is most of what keeps the public pages fast on a
 // slow connection.
 const Login = lazy(() => import('./pages/admin/Login'))
+const ResetPassword = lazy(() => import('./pages/admin/ResetPassword'))
 const RequireAdmin = lazy(() => import('./pages/admin/RequireAdmin'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
@@ -43,6 +44,14 @@ export default function App() {
         element={
           <Suspense fallback={<AdminFallback />}>
             <Login />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/admin/reset-password"
+        element={
+          <Suspense fallback={<AdminFallback />}>
+            <ResetPassword />
           </Suspense>
         }
       />

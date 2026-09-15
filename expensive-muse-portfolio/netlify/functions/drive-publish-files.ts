@@ -4,14 +4,19 @@ import { requireAdmin, getValidGoogleAccessToken, jsonResponse, errorResponse } 
 /**
  * Makes the given Drive file IDs viewable via link (anyone with the link,
  * via our own embedded player only — we never post the raw Drive link
- * anywhere) and, where Google's API allows it for the account type, turns
- * off the "download / print / copy" affordance in Drive's own viewer.
+ * anywhere).
  *
- * Limitation (disclosed, not hidden): `copyRequiresWriterPermission` /
- * viewers-can-download restrictions are enforced by Google Drive's own
- * preview UI, not by us. A determined client can still screen-record
- * playback — nothing server-side can prevent that. This stops casual
- * right-click/download and keeps the studio's Drive folder itself private.
+ * Disclosed limitation, now confirmed in practice: Google Drive's
+ * `viewersCanCopyContent: false` / `copyRequiresWriterPermission: true`
+ * download-restriction settings break the public `/preview` embed for
+ * anonymous "anyone with the link" viewers — Drive forces them through a
+ * sign-in wall instead of showing the file, which looks like the video is
+ * broken. Since a working portfolio matters more than a soft download
+ * deterrent (and neither setting stops real copying like screen recording
+ * anyway), this function only sets sharing to "anyone with the link, view
+ * only" and leaves Drive's copy/download UI at its default. The real
+ * protection that remains: the studio's Drive folder itself is never
+ * exposed, and the public site never prints a raw drive.google.com link.
  */
 export const handler: Handler = async (event) => {
   try {
@@ -25,19 +30,15 @@ export const handler: Handler = async (event) => {
     const results: Record<string, boolean> = {}
 
     for (const fileId of fileIds) {
-      // Anyone-with-link, read-only.
+      // Anyone-with-link, read-only. This is the only permission change
+      // applied — see the note above for why the copy/download restriction
+      // that used to run here was removed.
       const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: 'reader', type: 'anyone' }),
       })
-      // Restrict downloading/printing/copying by non-owners where supported.
-      const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ copyRequiresWriterPermission: true, viewersCanCopyContent: false }),
-      })
-      results[fileId] = permRes.ok && metaRes.ok
+      results[fileId] = permRes.ok
     }
 
     return jsonResponse(200, { results })
